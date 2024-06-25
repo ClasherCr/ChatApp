@@ -31,4 +31,13 @@ public class Repository {
                 });
     }
 
+    public String getCurrentUserId(){
+        return FirebaseAuth.getInstance().getUid();
+    }
+
+    // SignOut Functionality
+    public void signOUT(){
+        FirebaseAuth.getInstance().signOut();
+    }
+
 }
