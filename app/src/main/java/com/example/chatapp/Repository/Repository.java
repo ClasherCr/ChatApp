@@ -4,14 +4,40 @@ import android.content.Context;
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.MutableLiveData;
 
+import com.example.chatapp.model.ChatGroup;
 import com.example.chatapp.views.GroupsActivity;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Repository {
+
+    MutableLiveData<List<ChatGroup>> chatGroupMutableLiveData;
+
+    FirebaseDatabase database;
+    DatabaseReference reference;
+    DatabaseReference groupReference;
+
+    //MutableLiveData<List<ChatMessage>> messagesLiveData;
+
+    public Repository() {
+        this.chatGroupMutableLiveData = new MutableLiveData<>();
+        database = FirebaseDatabase.getInstance();
+        reference = database.getReference();    // The Root Reference
+
+       // messagesLiveData = new MutableLiveData<>();
+    }
 
     public void firebaseAnonymousAuth(Context context){
         FirebaseAuth.getInstance().signInAnonymously()
@@ -38,6 +64,32 @@ public class Repository {
     // SignOut Functionality
     public void signOUT(){
         FirebaseAuth.getInstance().signOut();
+    }
+
+    public MutableLiveData<List<ChatGroup>> getChatGroupMutableLiveData() {
+        List<ChatGroup> groupsList = new ArrayList<>();
+
+        reference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                groupsList.clear();
+
+                for (DataSnapshot dataSnapshot : snapshot.getChildren()){
+                    ChatGroup group = new ChatGroup(dataSnapshot.getKey());
+                    groupsList.add(group);
+                }
+
+                chatGroupMutableLiveData.postValue(groupsList);
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
+        return chatGroupMutableLiveData;
     }
 
 }
