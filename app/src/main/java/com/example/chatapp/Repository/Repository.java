@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.MutableLiveData;
 
 import com.example.chatapp.model.ChatGroup;
+import com.example.chatapp.model.ChatMessage;
 import com.example.chatapp.views.GroupsActivity;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -29,16 +30,17 @@ public class Repository {
     DatabaseReference reference;
     DatabaseReference groupReference;
 
-    //MutableLiveData<List<ChatMessage>> messagesLiveData;
+    MutableLiveData<List<ChatMessage>> messagesLiveData;
 
     public Repository() {
         this.chatGroupMutableLiveData = new MutableLiveData<>();
         database = FirebaseDatabase.getInstance();
         reference = database.getReference();    // The Root Reference
 
-       // messagesLiveData = new MutableLiveData<>();
+        messagesLiveData = new MutableLiveData<>();
     }
 
+    // Auth
     public void firebaseAnonymousAuth(Context context){
         FirebaseAuth.getInstance().signInAnonymously()
                 .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
@@ -57,6 +59,7 @@ public class Repository {
                 });
     }
 
+    // Getting Current User ID
     public String getCurrentUserId(){
         return FirebaseAuth.getInstance().getUid();
     }
@@ -66,6 +69,8 @@ public class Repository {
         FirebaseAuth.getInstance().signOut();
     }
 
+
+    // Getting Chat Groups available from Firebase realtime DB
     public MutableLiveData<List<ChatGroup>> getChatGroupMutableLiveData() {
         List<ChatGroup> groupsList = new ArrayList<>();
 
@@ -91,5 +96,66 @@ public class Repository {
 
         return chatGroupMutableLiveData;
     }
+
+    // Creating a new group
+    public void createNewChatGroup(String groupName){
+        reference.child(groupName).setValue(groupName);
+
+    }
+
+
+    // Getting Messages Live Data
+    public MutableLiveData<List<ChatMessage>> getMessagesLiveData(String groupName) {
+        // child(groupName): used to specify a child node under the root reference
+        groupReference = database.getReference().child(groupName);
+
+        List<ChatMessage> messagesList = new ArrayList<>();
+
+        groupReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                messagesList.clear();
+
+
+                for (DataSnapshot dataSnapshot : snapshot.getChildren()){
+                    ChatMessage message = dataSnapshot.getValue(ChatMessage.class);
+                    messagesList.add(message);
+                }
+
+                messagesLiveData.postValue(messagesList);
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
+        return messagesLiveData;
+    }
+
+    public void sendMessage(String messageText, String chatGroup){
+
+        DatabaseReference ref = database
+                .getReference(chatGroup);
+
+
+        if (!messageText.trim().equals("")){
+            ChatMessage msg = new ChatMessage(
+                    FirebaseAuth.getInstance().getCurrentUser().getUid(),
+                    messageText,
+                    System.currentTimeMillis()
+            );
+
+            String randomKey = ref.push().getKey();
+
+            ref.child(randomKey).setValue(msg);
+
+        }
+    }
+
+
+
 
 }
